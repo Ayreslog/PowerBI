@@ -1,0 +1,30 @@
+Tabela fDados
+
+let
+    Fonte = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("i45WMjTQNzTUNzIwtFDSUXIEYiMDIGFhoBSrA5E0QpY0BkmaIiSNYZJOQGwIkjRBSJog64RLxgIA", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type text) meta [Serialized.Text = true]) in type table [Data Saída = _t, Item = _t, Quantidade = _t, #"Disponibilidade" = _t]),
+    #"Colunas Removidas" = Table.RemoveColumns(Fonte,{"Disponibilidade"}),
+    Localidade = Table.TransformColumnTypes(#"Colunas Removidas", {{"Data Saída", type date}}, "en-US"),
+    TipoAlterado = Table.TransformColumnTypes(Localidade,{{"Quantidade", Int64.Type}})
+in
+    TipoAlterado
+
+=====//=====
+
+Tabela dEstoque
+
+let
+    Fonte = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("i45WclTSUTI0MFCK1YlWcgKyTYHMWAA=", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type text) meta [Serialized.Text = true]) in type table [Item = _t, Qtde Estoque = _t]),
+    #"Tipo Alterado" = Table.TransformColumnTypes(Fonte,{{"Item", type text}, {"Qtde Estoque", Int64.Type}})
+in
+    #"Tipo Alterado"
+
+==============
+
+Disponibilidade = 
+VAR Estoqueinicial = LOOKUPVALUE(dEstoque[Qtde Estoque],dEstoque[Item],SELECTEDVALUE(fDados[Item]))
+//lOOKUPVALUE SERIA COMO UM PROCV entre as tabelas
+var Estoqueinicial2 = CALCULATE(SELECTEDVALUE(dEstoque[Qtde Estoque]),CROSSFILTER(dEstoque[Item],fDados[Item],Both))
+// CALCULATE SELECTEDVALUE FAZ MESMA COISA QUE LOOKUPVALUE E ADICIONA CROSSFILTER PARA BUSCAR AMBAS OS LADOS.
+VAR QtdAcumInversa = CALCULATE(SUM(fDados[Quantidade]),FILTER(ALL(fDados),fDados[Item]=VALUES(fDados[Item]) && fDados[Data Saída].[Date]<=VALUES(fDados[Data Saída].[Date])))
+Return 
+QtdAcumInversa
